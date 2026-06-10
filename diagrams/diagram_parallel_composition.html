@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Parallel Composition — Jerboa Templates</title>
+<style>
+html{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent;}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background-color:rgba(255,255,255,.15);border-radius:10px;border:2px solid transparent;background-clip:padding-box;}
+::-webkit-scrollbar-thumb:hover{background-color:rgba(255,255,255,.3);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  --bg:#0c0b09;--bg2:#1a1714;--ink:#f0ede6;--ink2:#b8b4aa;--ink3:#888580;
+  --bdr:rgba(255,255,255,.10);
+  --slip-bg:#0d1a2e;--slip-bd:#2563EB;--slip-h:#93c5fd;--slip-s:#60a5fa;
+  --inert-bg:#1a0d2e;--inert-bd:#7B35CC;--inert-h:#c090ff;--inert-s:#a070e8;
+  --hop-bg:#0d261a;--hop-bd:#059669;--hop-h:#6ee7b7;--hop-s:#34d399;
+  --ctrl-bg:#2e0f1f;--ctrl-bd:#DB2777;--ctrl-h:#f9a8d4;--ctrl-s:#ec4899;
+  --jerboa-bg:#2e1507;--jerboa-bd:#EA580C;--jerboa-h:#fdba74;--jerboa-s:#f97316;
+  --raibert-bg:#1f1a07;--raibert-bd:#D97706;--raibert-h:#fcd34d;--raibert-s:#f59e0b;
+  background:var(--bg);color:var(--ink);font-family:'DM Mono','Fira Code',monospace;
+  min-height:100vh;padding:20px 16px 28px;
+}
+body.light{
+  --bg:#f5f3ef;--bg2:#ffffff;--ink:#1a1714;--ink2:#44403c;--ink3:#78716c;
+  --bdr:rgba(0,0,0,.12);
+  --slip-bg:#dbeafe;--slip-bd:#1D4ED8;--slip-h:#1e3a8a;--slip-s:#3b82f6;
+  --inert-bg:#ede9fe;--inert-bd:#7C3AED;--inert-h:#5b21b6;--inert-s:#8b5cf6;
+  --hop-bg:#d1fae5;--hop-bd:#047857;--hop-h:#064e3b;--hop-s:#10b981;
+  --ctrl-bg:#fce7f3;--ctrl-bd:#BE185D;--ctrl-h:#831843;--ctrl-s:#ec4899;
+  --jerboa-bg:#ffedd5;--jerboa-bd:#C2410C;--jerboa-h:#7c2d12;--jerboa-s:#f97316;
+  --raibert-bg:#fef3c7;--raibert-bd:#B45309;--raibert-h:#78350f;--raibert-s:#d97706;
+}
+h2{font-size:13px;color:var(--ink2);text-align:center;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;}
+.sub{font-size:10px;color:var(--ink3);text-align:center;margin-bottom:16px;}
+.wrap{max-width:900px;margin:0 auto;}
+svg{width:100%;height:auto;overflow:visible;}
+.nt{font-size:12px;font-weight:700;font-family:'DM Mono',monospace;}
+.ns{font-size:9px;font-family:'DM Mono',monospace;opacity:.85;}
+.nc{font-size:8px;font-family:'DM Mono',monospace;opacity:.72;}
+.nb{rx:9;stroke-width:1.8;}
+.arr{stroke:var(--ink3);stroke-width:1.6;fill:none;marker-end:url(#arh);}
+.arr-bold{stroke-width:2.2;}
+.al{font-size:9px;font-family:'DM Mono',monospace;fill:var(--ink2);}
+.phase-label{font-size:9.5px;font-family:'DM Mono',monospace;fill:var(--ink3);text-transform:uppercase;letter-spacing:.07em;}
+.divider{stroke:var(--bdr);stroke-width:1;stroke-dasharray:6,4;}
+.theme-btn{position:fixed;top:14px;right:16px;z-index:999;width:36px;height:36px;border-radius:50%;border:1.5px solid var(--bdr);background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:17px;transition:all .2s;}
+.theme-btn:hover{transform:scale(1.1);}
+#tp{display:none;position:fixed;max-width:260px;background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;padding:10px 13px;font-size:10px;color:var(--ink2);line-height:1.7;z-index:200;pointer-events:none;font-family:'DM Mono',monospace;white-space:normal;word-break:break-word;box-shadow:0 8px 32px rgba(0,0,0,.5);}
+</style>
+</head>
+<body>
+<button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+<h2>Parallel Composition of Templates — Jerboa Robot</h2>
+<p class="sub">Two decoupled control behaviors execute simultaneously across both phases · each template is designed independently · their composition produces complex locomotion</p>
+
+<div class="wrap">
+<svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="arh" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+    <polygon points="0 0,8 3,0 6" fill="#888580"/>
+  </marker>
+  <marker id="arh-org" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+    <polygon points="0 0,8 3,0 6" fill="#EA580C"/>
+  </marker>
+  <filter id="glow-org">
+    <feGaussianBlur stdDeviation="5" result="blur"/>
+    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+  </filter>
+</defs>
+
+<!-- Phase column headers -->
+<text class="phase-label" x="215" y="28" text-anchor="middle">Stance Phase</text>
+<text class="phase-label" x="685" y="28" text-anchor="middle">Flight Phase</text>
+<line class="divider" x1="450" y1="10" x2="450" y2="430"/>
+
+<!-- ── LEFT BRANCH: SLIP TEMPLATE ── -->
+<!-- Header -->
+<rect x="10" y="40" width="420" height="30" rx="6" fill="rgba(37,99,235,.08)" stroke="#2563EB" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="220" y="60" text-anchor="middle" font-size="11" font-family="DM Mono" font-weight="700" fill="#93c5fd">TEMPLATE 1: SLIP (Spring-Loaded Inverted Pendulum)</text>
+
+<!-- SLIP EOM node -->
+<g data-tip="SLIP polar EOM (stance): l̈ = l·φ̇² − (k/m)·(l−l₀) − g·cos(φ)  |  φ̈ = (g/l)·sin(φ) − 2·φ̇·ṙ/l. These two coupled ODEs govern leg length and angle during ground contact. The spring term (k/m)·(l−l₀) is what makes the SLIP model a template for running — it captures the energy storage/release cycle.">
+  <rect class="nb" x="20" y="85" width="190" height="105" fill="var(--slip-bg)" stroke="var(--slip-bd)"/>
+  <text class="nt" x="115" y="110" text-anchor="middle" fill="var(--slip-h)">SLIP EOM (polar)</text>
+  <text class="ns" x="115" y="128" text-anchor="middle" fill="var(--slip-s)">l̈ = lφ̇² − k/m·(l−l₀) − g·cosφ</text>
+  <text class="ns" x="115" y="145" text-anchor="middle" fill="var(--slip-s)">φ̈ = g/l·sinφ − 2φ̇ṙ/l</text>
+  <text class="nc" x="115" y="162" text-anchor="middle" fill="var(--slip-s)">State: [l, φ, ṙ, φ̇]</text>
+  <text class="nc" x="115" y="178" text-anchor="middle" fill="var(--slip-s)">Lossless → deadbeat control</text>
+</g>
+
+<!-- Five-bar anchoring -->
+<g data-tip="ANCHORING (five-bar): The SLIP spring force F=k(r₀−r) is computed, then mapped through the leg Jacobian chain: F→[τ1,τ2] via LegJacobian, then [τ1,τ2]→[Fx,Fy] via findFxFy. The five-bar leg has no physical spring, but the Jacobian mapping makes it behave as if it does. This is called 'anchoring' the SLIP template onto the mechanism.">
+  <rect class="nb" x="225" y="85" width="190" height="105" fill="var(--hop-bg)" stroke="var(--hop-bd)"/>
+  <text class="nt" x="320" y="110" text-anchor="middle" fill="var(--hop-h)">Five-Bar Anchoring</text>
+  <text class="ns" x="320" y="128" text-anchor="middle" fill="var(--hop-s)">F = k·(r₀−r)  →  LegJacobian</text>
+  <text class="ns" x="320" y="145" text-anchor="middle" fill="var(--hop-s)">[τ1,τ2]  →  findFxFy</text>
+  <text class="nc" x="320" y="162" text-anchor="middle" fill="var(--hop-s)">→ [Fx, Fy] Cartesian</text>
+  <text class="nc" x="320" y="178" text-anchor="middle" fill="var(--hop-s)">Virtual spring via actuators</text>
+</g>
+
+<!-- Raibert speed control -->
+<g data-tip="Raibert's stepping law (applied at liftoff): φtd = arcsin( ẋ·Ts/(2·l₀)  +  kp·(ẋ−ẋdes)/l₀ ). First term places foot symmetrically (no speed change). Second term is proportional correction for speed error. Called once per stride at liftoff; Ts is the measured stance duration. The gain kp is tuned for the target convergence rate.">
+  <rect class="nb" x="20" y="215" width="395" height="75" fill="var(--raibert-bg)" stroke="var(--raibert-bd)"/>
+  <text class="nt" x="218" y="240" text-anchor="middle" fill="var(--raibert-h)">Raibert's Stepping Law (SLIP + 5-bar + Jerboa)</text>
+  <text class="ns" x="218" y="258" text-anchor="middle" fill="var(--raibert-s)">φtd = arcsin( ẋ·Ts/2r  +  kp·(ẋ−ẋdes)/r )</text>
+  <text class="nc" x="218" y="275" text-anchor="middle" fill="var(--raibert-s)">Applied at liftoff → leg servo'd to φtd during flight</text>
+</g>
+
+<!-- ── RIGHT BRANCH: INERTIAL REORIENTATION ── -->
+<rect x="460" y="40" width="430" height="30" rx="6" fill="rgba(123,53,204,.08)" stroke="#7B35CC" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="675" y="60" text-anchor="middle" font-size="11" font-family="DM Mono" font-weight="700" fill="#c090ff">TEMPLATE 2: Inertial Reorientation</text>
+
+<!-- Stance controllers -->
+<g data-tip="STANCE — Hip torque (pitch stabilization): τh = Kp·φ1 + 2√Kp·φ̇1. This is a critically damped PD controller targeting body pitch φ1=0. The gain 2√Kp gives critical damping, preventing overshoot. Applied during stance phase simultaneously with the tail energy pump.">
+  <rect class="nb" x="470" y="85" width="195" height="105" fill="var(--ctrl-bg)" stroke="var(--ctrl-bd)"/>
+  <text class="nt" x="567" y="110" text-anchor="middle" fill="var(--ctrl-h)">Hip Torque (stance)</text>
+  <text class="ns" x="567" y="128" text-anchor="middle" fill="var(--ctrl-s)">τh = Kp·φ1 + 2√Kp·φ̇1</text>
+  <text class="nc" x="567" y="145" text-anchor="middle" fill="var(--ctrl-s)">Critically damped PD</text>
+  <text class="nc" x="567" y="162" text-anchor="middle" fill="var(--ctrl-s)">Goal: φ1 → 0 (level body)</text>
+  <text class="nc" x="567" y="178" text-anchor="middle" fill="var(--ctrl-s)">Kp, Kv tuned for response</text>
+</g>
+
+<g data-tip="STANCE — Tail torque (energy pumping): τt = −mb·lt·r·√(k/mb)·cos(∠(y+iẏ)). The complex angle ∠(y+iẏ) tracks whether the body is moving up or down relative to its position — analogous to the phase angle of a harmonic oscillator. This torque pumps energy at the right moment to sustain running despite leg damping losses.">
+  <rect class="nb" x="680" y="85" width="210" height="105" fill="var(--inert-bg)" stroke="var(--inert-bd)"/>
+  <text class="nt" x="785" y="108" text-anchor="middle" fill="var(--inert-h)">Tail Torque (stance)</text>
+  <text class="ns" x="785" y="126" text-anchor="middle" fill="var(--inert-h)">Energy Pumping</text>
+  <text class="ns" x="785" y="144" text-anchor="middle" fill="var(--inert-s)">τt = −mb·lt·r·√(k/mb)</text>
+  <text class="ns" x="785" y="161" text-anchor="middle" fill="var(--inert-s)">    ×cos(∠(y+iẏ))</text>
+  <text class="nc" x="785" y="178" text-anchor="middle" fill="var(--inert-s)">Compensates damping loss</text>
+</g>
+
+<!-- Flight tail reorientation -->
+<g data-tip="FLIGHT — Tail reorientation: τt = −Kp·(φ1+φ2−π) − Kv·(φ̇1+φ̇2). During flight, the tail is driven to restore the absolute tail angle (φ1+φ2) to π radians. This uses inertial coupling — rotating the tail reorients the body without any external forces (analogous to a falling cat righting itself).">
+  <rect class="nb" x="470" y="215" width="420" height="75" fill="var(--inert-bg)" stroke="var(--inert-bd)"/>
+  <text class="nt" x="680" y="240" text-anchor="middle" fill="var(--inert-h)">Tail Reorientation (flight)  — shape control</text>
+  <text class="ns" x="680" y="258" text-anchor="middle" fill="var(--inert-s)">τt = −Kp·(φ1+φ2−π) − Kv·(φ̇1+φ̇2)</text>
+  <text class="nc" x="680" y="275" text-anchor="middle" fill="var(--inert-s)">Inertial reorientation — zero external torque needed</text>
+</g>
+
+<!-- ── JERBOA OUTPUT (GLOW) ── -->
+<g filter="url(#glow-org)" data-tip="JERBOA TAILED BIPED: The result of composing both templates. During stance: SLIP controls speed (Raibert) AND hip corrects pitch AND tail pumps energy — all three simultaneously, without coupling. During flight: Raibert servo positions leg AND tail reorients body — again simultaneously. This is parallel composition: complex behavior from simple, independently-designed templates.">
+  <rect class="nb" x="250" y="390" width="400" height="100" rx="12" fill="var(--jerboa-bg)" stroke="var(--jerboa-bd)" stroke-width="2.5"/>
+  <text class="nt" x="450" y="420" text-anchor="middle" font-size="14" fill="var(--jerboa-h)">🐾 JERBOA TAILED BIPED</text>
+  <text class="ns" x="450" y="441" text-anchor="middle" fill="var(--jerboa-s)">Emergent behavior: sustained forward running at ẋ = 0.8 m/s</text>
+  <text class="nc" x="450" y="458" text-anchor="middle" fill="var(--jerboa-s)">Body pitch → 0°  ·  Tail oscillates for energy  ·  Speed regulated</text>
+  <text class="nc" x="450" y="476" text-anchor="middle" fill="var(--jerboa-s)">3 concurrent objectives · 2 actuators · 8 states · 2 phases</text>
+</g>
+
+<!-- Connection arrows -->
+<!-- SLIP → Jerboa -->
+<path class="arr arr-bold" d="M218,290 L218,340 C218,370 330,390 350,400" stroke="#f97316" marker-end="url(#arh-org)"/>
+<!-- Inertial → Jerboa -->
+<path class="arr arr-bold" d="M680,290 L680,340 C680,375 570,390 550,400" stroke="#f97316" marker-end="url(#arh-org)"/>
+<!-- Compose label -->
+<text x="450" y="360" text-anchor="middle" font-size="12" font-family="DM Mono" fill="#EA580C" font-weight="700">∥  parallel composition  ∥</text>
+<!-- Arrow EOM → Raibert -->
+<path class="arr" d="M115,190 L115,215"/>
+<path class="arr" d="M320,190 L320,215"/>
+<!-- Arrow hip → flight -->
+<path class="arr" d="M567,190 L567,215"/>
+<path class="arr" d="M785,190 L785,215"/>
+</svg>
+</div>
+
+<div id="tp"></div>
+<script>
+let dark=true;
+function toggleTheme(){dark=!dark;document.body.className=dark?'':'light';document.getElementById('themeBtn').textContent=dark?'🌙':'☀️';}
+const tp=document.getElementById('tp'),PAD=14;
+document.querySelectorAll('[data-tip]').forEach(el=>{
+  el.style.cursor='default';
+  el.addEventListener('mouseenter',e=>{tp.textContent=el.dataset.tip;tp.style.left='-9999px';tp.style.top='-9999px';tp.style.display='block';});
+  el.addEventListener('mousemove',e=>{
+    const tw=tp.offsetWidth,th=tp.offsetHeight,vw=window.innerWidth,vh=window.innerHeight;
+    let left=e.clientX+PAD,top=e.clientY-th-PAD;
+    if(left+tw>vw-8)left=e.clientX-tw-PAD;if(top<8)top=e.clientY+PAD;
+    if(left<8)left=8;if(left+tw>vw-8)left=vw-tw-8;if(top<8)top=8;if(top+th>vh-8)top=vh-th-8;
+    tp.style.left=left+'px';tp.style.top=top+'px';
+  });
+  el.addEventListener('mouseleave',()=>{tp.style.display='none';});
+});
+</script>
+
+<script>
+(function(){
+  function updateAll(){
+    var svg = document.querySelector('svg');
+
+    // Scale legend proportionally to SVG shrinkage
+    if(svg && svg.viewBox && svg.viewBox.baseVal.width > 0){
+      var vbW = svg.viewBox.baseVal.width;
+      var renderedW = svg.getBoundingClientRect().width;
+      if(renderedW > 0){
+        var scale = Math.min(1, renderedW / vbW);
+        var lgd = document.querySelector('.lgd') || svg.nextElementSibling;
+        if(lgd){
+          lgd.style.fontSize = Math.max(8, 11 * scale).toFixed(1) + 'px';
+          lgd.style.gap      = Math.max(6, 14 * scale).toFixed(1) + 'px';
+        }
+      }
+    }
+
+    // body.scrollHeight shrinks correctly on resize
+    // documentElement.scrollHeight does NOT (it fills iframe viewport) — never use it
+    window.parent.postMessage({type:'iframeResize', h: document.body.scrollHeight + 4}, '*');
+  }
+
+  window.addEventListener('load', function(){ setTimeout(updateAll, 150); });
+  if(window.ResizeObserver){
+    new ResizeObserver(updateAll).observe(document.documentElement);
+  }
+})();
+</script>
+
+</body>
+</html>

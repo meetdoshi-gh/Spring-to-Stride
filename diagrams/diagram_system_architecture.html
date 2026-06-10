@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hybrid State Machine — Locomotion System</title>
+<style>
+/* Modern thin scrollbar */
+html { scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.2) transparent; }
+::-webkit-scrollbar { width:8px; height:8px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background-color:rgba(255,255,255,.15); border-radius:10px; border:2px solid transparent; background-clip:padding-box; }
+::-webkit-scrollbar-thumb:hover { background-color:rgba(255,255,255,.3); }
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  --bg:#0c0b09; --bg2:#1a1714; --ink:#f0ede6; --ink2:#b8b4aa; --ink3:#888580;
+  --bdr:rgba(255,255,255,.10); --sh:0 2px 8px rgba(0,0,0,.6);
+  --flight-bg:#0d1a2e; --flight-bd:#2563EB; --flight-h:#93c5fd; --flight-s:#60a5fa;
+  --stance-bg:#0d261a; --stance-bd:#059669; --stance-h:#6ee7b7; --stance-s:#34d399;
+  --thrust-bg:#1f1a07; --thrust-bd:#D97706; --thrust-h:#fcd34d; --thrust-s:#f59e0b;
+  --compose-bg:#2e0f1f; --compose-bd:#DB2777; --compose-h:#f9a8d4; --compose-s:#ec4899;
+  --novel-bg:#2e1507; --novel-bd:#EA580C; --novel-h:#fdba74; --novel-s:#f97316;
+  background:var(--bg); color:var(--ink); font-family:'DM Mono','Fira Code',monospace;
+  min-height:100vh; padding:20px 16px 28px;
+}
+body.light{
+  --bg:#f5f3ef; --bg2:#ffffff; --ink:#1a1714; --ink2:#44403c; --ink3:#78716c;
+  --bdr:rgba(0,0,0,.12); --sh:0 2px 8px rgba(0,0,0,.10);
+  --flight-bg:#dbeafe; --flight-bd:#1D4ED8; --flight-h:#1e3a8a; --flight-s:#3b82f6;
+  --stance-bg:#d1fae5; --stance-bd:#047857; --stance-h:#064e3b; --stance-s:#10b981;
+  --thrust-bg:#fef3c7; --thrust-bd:#B45309; --thrust-h:#78350f; --thrust-s:#d97706;
+  --compose-bg:#fce7f3; --compose-bd:#BE185D; --compose-h:#831843; --compose-s:#ec4899;
+  --novel-bg:#ffedd5; --novel-bd:#C2410C; --novel-h:#7c2d12; --novel-s:#f97316;
+}
+h2{font-size:13px;color:var(--ink2);text-align:center;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+.sub{font-size:10px;color:var(--ink3);text-align:center;margin-bottom:18px;}
+.diagram-wrap{max-width:860px;margin:0 auto;}
+svg{width:100%;height:auto;overflow:visible;}
+/* Node base */
+.node-rect{rx:10;stroke-width:1.8;}
+.node-title{font-size:13px;font-weight:700;font-family:'DM Mono',monospace;}
+.node-sub{font-size:9.5px;font-family:'DM Mono',monospace;opacity:.85;}
+.node-ctrl{font-size:8.5px;font-family:'DM Mono',monospace;opacity:.7;}
+
+/* Flight node */
+.n-flight .node-rect{fill:var(--flight-bg);stroke:var(--flight-bd);}
+.n-flight .node-title{fill:var(--flight-h);}
+.n-flight .node-sub,.n-flight .node-ctrl{fill:var(--flight-s);}
+
+/* Stance node */
+.n-stance .node-rect{fill:var(--stance-bg);stroke:var(--stance-bd);}
+.n-stance .node-title{fill:var(--stance-h);}
+.n-stance .node-sub,.n-stance .node-ctrl{fill:var(--stance-s);}
+
+/* Thrust node */
+.n-thrust .node-rect{fill:var(--thrust-bg);stroke:var(--thrust-bd);}
+.n-thrust .node-title{fill:var(--thrust-h);}
+.n-thrust .node-sub,.n-thrust .node-ctrl{fill:var(--thrust-s);}
+
+/* Parallel composition — key novel component */
+.n-compose .node-rect{fill:var(--novel-bg);stroke:var(--novel-bd);stroke-width:2.5px;
+  box-shadow:0 0 18px rgba(234,88,12,.35),0 0 40px rgba(234,88,12,.12);}
+.n-compose .node-title{fill:var(--novel-h);}
+.n-compose .node-sub,.n-compose .node-ctrl{fill:var(--novel-s);}
+
+/* Arrows */
+.arr{stroke:var(--ink3);stroke-width:1.5;fill:none;marker-end:url(#ah);}
+.arr-label{font-size:9px;font-family:'DM Mono',monospace;fill:var(--ink2);}
+.guard{font-size:8px;font-family:'DM Mono',monospace;fill:var(--ink3);font-style:italic;}
+
+/* Legend */
+.legend{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:18px;}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--ink2);}
+.leg-swatch{width:12px;height:12px;border-radius:3px;border:1.5px solid;}
+
+.theme-btn{position:fixed;top:14px;right:16px;z-index:999;width:36px;height:36px;
+  border-radius:50%;border:1.5px solid var(--bdr);background:var(--bg2);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:17px;transition:all .2s;}
+.theme-btn:hover{transform:scale(1.1);}
+
+#tp{display:none;position:fixed;max-width:260px;background:var(--bg2);
+  border:1px solid var(--bdr);border-radius:8px;padding:10px 13px;font-size:10px;
+  color:var(--ink2);line-height:1.7;z-index:200;pointer-events:none;
+  font-family:'DM Mono',monospace;white-space:normal;word-break:break-word;
+  box-shadow:0 8px 32px rgba(0,0,0,.5);}
+</style>
+</head>
+<body>
+<button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+
+<h2>Hybrid State Machine — Locomotion System</h2>
+<p class="sub">Four-phase hybrid dynamical system · guard conditions trigger discrete transitions · control law active in each phase</p>
+
+<div class="diagram-wrap">
+<svg viewBox="0 0 860 520" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <marker id="ah" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+    <polygon points="0 0,8 3,0 6" fill="#888580"/>
+  </marker>
+  <filter id="glow">
+    <feGaussianBlur stdDeviation="4" result="blur"/>
+    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+  </filter>
+</defs>
+
+<!-- ── SLIP / FIVE-BAR HOPPER ── -->
+<!-- Phase 4: Flight -->
+<g class="n-flight" data-tip="FLIGHT PHASE: Body in free fall. No ground contact. Raibert's law computed at liftoff — touchdown angle φtd set here. Leg servo'd to φtd during flight. Guard: y < l₀·cos(φtd) triggers touchdown.">
+  <rect class="node-rect" x="10" y="200" width="180" height="115" rx="10"/>
+  <text class="node-title" x="100" y="228" text-anchor="middle">✈ FLIGHT</text>
+  <text class="node-sub" x="100" y="248" text-anchor="middle">State: Q=[x,y,ẋ,ẏ]</text>
+  <text class="node-ctrl" x="100" y="265" text-anchor="middle">EOM: ẍ=0, ÿ=−g</text>
+  <text class="node-ctrl" x="100" y="282" text-anchor="middle">Ctrl: leg→φtd (servo)</text>
+  <text class="node-ctrl" x="100" y="299" text-anchor="middle">Raibert law computed ↑</text>
+</g>
+
+<!-- Phase 1: Stance pre-thrust -->
+<g class="n-stance" data-tip="STANCE (pre-thrust): Ground contact established. Spring law F=k(r₀−r) active. Damping forces Fxb, Fyb applied. For five-bar: force mapped through Jacobian chain. Guard: ṙ=0 (bottom of stride) triggers thrust phase.">
+  <rect class="node-rect" x="330" y="60" width="200" height="120" rx="10"/>
+  <text class="node-title" x="430" y="88" text-anchor="middle">🦿 STANCE (pre)</text>
+  <text class="node-sub" x="430" y="108" text-anchor="middle">State: Q=[x,y,ẋ,ẏ]</text>
+  <text class="node-ctrl" x="430" y="126" text-anchor="middle">F = k·(r₀−r)</text>
+  <text class="node-ctrl" x="430" y="143" text-anchor="middle">Fx/Fy via Jacobian chain</text>
+  <text class="node-ctrl" x="430" y="160" text-anchor="middle">+ Damping Fxb, Fyb</text>
+</g>
+
+<!-- Phase 2: Thrust -->
+<g class="n-thrust" data-tip="THRUST PHASE: Spring stiffness boosted to N·k. Energy injected for a brief burst after bottom of stride (duration T_thrust). Compensates leg damping losses — allows sustained running despite dissipation. Guard: t > t_begin + T_thrust.">
+  <rect class="node-rect" x="660" y="200" width="185" height="115" rx="10"/>
+  <text class="node-title" x="752" y="228" text-anchor="middle">⚡ THRUST</text>
+  <text class="node-sub" x="752" y="248" text-anchor="middle">Duration: T_thrust</text>
+  <text class="node-ctrl" x="752" y="265" text-anchor="middle">F = N·k·(r₀−r)</text>
+  <text class="node-ctrl" x="752" y="282" text-anchor="middle">F = N·k·(r₀−r)</text>
+  <text class="node-ctrl" x="752" y="299" text-anchor="middle">Energy injection burst</text>
+</g>
+
+<!-- Phase 3: Stance post-thrust -->
+<g class="n-stance" data-tip="STANCE (post-thrust): Spring law resumes at normal stiffness k. Integration continues until liftoff event (r=r₀). At liftoff: compute Raibert's touchdown angle for next stride, update φtd. Guard: r=r₀ (leg returns to rest length).">
+  <rect class="node-rect" x="330" y="340" width="200" height="120" rx="10"/>
+  <text class="node-title" x="430" y="368" text-anchor="middle">🦿 STANCE (post)</text>
+  <text class="node-sub" x="430" y="388" text-anchor="middle">State: Q=[x,y,ẋ,ẏ]</text>
+  <text class="node-ctrl" x="430" y="406" text-anchor="middle">F = k·(r₀−r)</text>
+  <text class="node-ctrl" x="430" y="423" text-anchor="middle">Liftoff event → update φtd</text>
+  <text class="node-ctrl" x="430" y="440" text-anchor="middle">Raibert law fires here ↓</text>
+</g>
+
+<!-- Arrows: circular flow -->
+<!-- Flight → Stance pre (right-up) -->
+<path class="arr" d="M190,225 C260,225 280,160 330,130"/>
+<text class="arr-label" x="238" y="175">TOUCHDOWN</text>
+<text class="guard" x="238" y="186">y &lt; r₀·cos(φtd)</text>
+
+<!-- Stance pre → Thrust (right) -->
+<path class="arr" d="M530,120 C590,120 620,200 660,240"/>
+<text class="arr-label" x="572" y="163">BOTTOM</text>
+<text class="guard" x="572" y="174">ṙ = 0</text>
+
+<!-- Thrust → Stance post (down-left) -->
+<path class="arr" d="M752,315 C752,340 620,370 530,390"/>
+<text class="arr-label" x="628" y="355">TIME ELAPSED</text>
+<text class="guard" x="628" y="366">t &gt; t₀+T_thrust</text>
+
+<!-- Stance post → Flight (left) -->
+<path class="arr" d="M330,400 C260,400 200,350 150,315"/>
+<text class="arr-label" x="224" y="382">LIFTOFF</text>
+<text class="guard" x="224" y="393">r = r₀</text>
+
+<!-- ── JERBOA EXTENSION ── -->
+<!-- Parallel composition node -->
+<g class="n-compose" filter="url(#glow)" data-tip="PARALLEL COMPOSITION (Jerboa): This is the key innovation — three control objectives execute simultaneously in the same phase without interference. SLIP template provides speed regulation; inertial reorientation provides pitch stability + energy. The Jerboa achieves complex locomotion by composing simple, decoupled templates.">
+  <rect class="node-rect" x="280" y="430" width="300" height="80" rx="10"/>
+  <text class="node-title" x="430" y="458" text-anchor="middle">⊕ PARALLEL COMPOSITION</text>
+  <text class="node-sub" x="430" y="476" text-anchor="middle">SLIP ∥ Inertial Reorientation</text>
+  <text class="node-ctrl" x="430" y="494" text-anchor="middle">Jerboa: τh + τt active in BOTH phases</text>
+</g>
+
+<!-- Stance → compose -->
+<path class="arr" d="M430,460 L430,450" stroke="#EA580C"/>
+
+<!-- Raibert law callout -->
+<rect x="0" y="100" width="175" height="85" rx="8" fill="rgba(37,99,235,.12)" stroke="#2563EB" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="88" y="122" text-anchor="middle" font-size="10" font-family="DM Mono" fill="#93c5fd">Raibert's Law</text>
+<text x="88" y="140" text-anchor="middle" font-size="9" font-family="DM Mono" fill="#60a5fa">φtd = arcsin(</text>
+<text x="88" y="155" text-anchor="middle" font-size="9" font-family="DM Mono" fill="#60a5fa">  ẋ·Ts/2r + kp·Δẋ/r)</text>
+<text x="88" y="172" text-anchor="middle" font-size="8.5" font-family="DM Mono" fill="#888580">applied at liftoff →</text>
+
+<!-- Guard callout box -->
+<rect x="668" y="90" width="175" height="95" rx="8" fill="rgba(5,150,105,.12)" stroke="#059669" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="755" y="113" text-anchor="middle" font-size="10" font-family="DM Mono" fill="#6ee7b7">Guard Conditions</text>
+<text x="755" y="131" text-anchor="middle" font-size="8.5" font-family="DM Mono" fill="#34d399">TD: y &lt; r₀·cos(φtd)</text>
+<text x="755" y="147" text-anchor="middle" font-size="8.5" font-family="DM Mono" fill="#34d399">BTM: ṙ = 0</text>
+<text x="755" y="163" text-anchor="middle" font-size="8.5" font-family="DM Mono" fill="#34d399">LO: r = r₀</text>
+<text x="755" y="179" text-anchor="middle" font-size="8.5" font-family="DM Mono" fill="#34d399">THR: t &gt; t₀+T_thrust</text>
+</svg>
+</div>
+
+<div class="legend">
+  <div class="leg-item"><span class="leg-swatch" style="background:#0d1a2e;border-color:#2563EB"></span>Flight</div>
+  <div class="leg-item"><span class="leg-swatch" style="background:#0d261a;border-color:#059669"></span>Stance (SLIP/5-bar)</div>
+  <div class="leg-item"><span class="leg-swatch" style="background:#1f1a07;border-color:#D97706"></span>Thrust (energy injection)</div>
+  <div class="leg-item"><span class="leg-swatch" style="background:#2e1507;border-color:#EA580C"></span>Parallel Composition (Jerboa)</div>
+</div>
+
+<div id="tp"></div>
+
+<script>
+let dark=true;
+function toggleTheme(){
+  dark=!dark;
+  document.body.className=dark?'':'light';
+  document.getElementById('themeBtn').textContent=dark?'🌙':'☀️';
+}
+const tp=document.getElementById('tp');
+const PAD=14;
+document.querySelectorAll('[data-tip]').forEach(el=>{
+  el.style.cursor='default';
+  el.addEventListener('mouseenter',e=>{
+    tp.textContent=el.dataset.tip;
+    tp.style.left='-9999px'; tp.style.top='-9999px'; tp.style.display='block';
+  });
+  el.addEventListener('mousemove',e=>{
+    const tw=tp.offsetWidth,th=tp.offsetHeight;
+    const vw=window.innerWidth,vh=window.innerHeight;
+    let left=e.clientX+PAD,top=e.clientY-th-PAD;
+    if(left+tw>vw-8)left=e.clientX-tw-PAD;
+    if(top<8)top=e.clientY+PAD;
+    if(left<8)left=8;
+    if(left+tw>vw-8)left=vw-tw-8;
+    if(top<8)top=8;
+    if(top+th>vh-8)top=vh-th-8;
+    tp.style.left=left+'px'; tp.style.top=top+'px';
+  });
+  el.addEventListener('mouseleave',()=>{tp.style.display='none';});
+});
+</script>
+
+<script>
+(function(){
+  function updateAll(){
+    var svg = document.querySelector('svg');
+
+    // Scale legend proportionally to SVG shrinkage
+    if(svg && svg.viewBox && svg.viewBox.baseVal.width > 0){
+      var vbW = svg.viewBox.baseVal.width;
+      var renderedW = svg.getBoundingClientRect().width;
+      if(renderedW > 0){
+        var scale = Math.min(1, renderedW / vbW);
+        var lgd = document.querySelector('.lgd') || svg.nextElementSibling;
+        if(lgd){
+          lgd.style.fontSize = Math.max(8, 11 * scale).toFixed(1) + 'px';
+          lgd.style.gap      = Math.max(6, 14 * scale).toFixed(1) + 'px';
+        }
+      }
+    }
+
+    // body.scrollHeight shrinks correctly on resize
+    // documentElement.scrollHeight does NOT (it fills iframe viewport) — never use it
+    window.parent.postMessage({type:'iframeResize', h: document.body.scrollHeight + 4}, '*');
+  }
+
+  window.addEventListener('load', function(){ setTimeout(updateAll, 150); });
+  if(window.ResizeObserver){
+    new ResizeObserver(updateAll).observe(document.documentElement);
+  }
+})();
+</script>
+
+</body>
+</html>
